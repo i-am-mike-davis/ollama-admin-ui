@@ -1,0 +1,18 @@
+[project]
+name = "ollama-admin-ui"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.115.11",
+    "jinja2>=3.1.6",
+    "ollama>=0.4.7",
+    "uvicorn>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.13",
+]
