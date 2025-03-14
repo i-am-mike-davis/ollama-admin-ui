@@ -31,6 +31,8 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+response = oclient.show("llama3.2")
+
 
 # @app.get("/")
 # def read_root():
