@@ -13,15 +13,23 @@ from fastapi.templating import Jinja2Templates
 from ollama import Client
 
 # local imports
-# import app.lib as lib
+# import app. as lib
+from ollama_remote.ollama_remote import LanguageModel, OllamaRemote
 
 # Get environment variables
 dotenv_path = Path("./.env")
 load_dotenv(dotenv_path=dotenv_path)
 OLLAMA_ADDRESS = os.getenv("OLLAMA_ADDRESS")
 
-# Initialize ollama client
+# Initialize the ollama client
 oclient = Client(host=OLLAMA_ADDRESS)
+
+# Initialize the client to read the remote ollama library.
+try:
+    ollama_library = OllamaRemote()
+except Exception as e:
+    print(f"Could not initialize the remote ollama library client...:\n{e}")
+
 
 # Initialize jinja2 html templates
 templates = Jinja2Templates(directory="templates")
@@ -31,7 +39,10 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-response = oclient.show("llama3.2")
+try:
+    response = oclient.show("llama3.2")
+except Exception as e:
+    print(e)
 
 
 # @app.get("/")
@@ -46,6 +57,15 @@ def get_root(request: Request):
 async def read_item(request: Request, id: str):
     return templates.TemplateResponse(
         request=request, name="item.html", context={"id": id}
+    )
+
+
+@app.get("/remote", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="remote-library.html",
+        context={"ollama_library": ollama_library},
     )
 
 

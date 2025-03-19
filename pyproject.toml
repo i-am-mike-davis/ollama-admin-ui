@@ -12,6 +12,7 @@ dependencies = [
     "ollama>=0.4.7",
     "requests>=2.32.3",
     "uvicorn>=0.34.0",
+    "yarl>=1.18.3",
 ]
 
 [dependency-groups]
