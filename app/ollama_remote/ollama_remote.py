@@ -10,6 +10,7 @@ import urllib.parse
 from pydantic import BaseModel
 from typing import List
 from yarl import URL
+from ollama import Client
 
 
 class LanguageModel(BaseModel):
@@ -17,6 +18,7 @@ class LanguageModel(BaseModel):
     link: str = ""
     short_description: str = ""
     tags: List[str] = []
+    installed_tags: List[str] = []
 
 
 class OllamaRemote:
@@ -36,9 +38,13 @@ class OllamaRemote:
             try:
                 print("Attempting to load library from cache")
                 self.load_from_cache()
+                print("Loaded library from cache!...")
             except:
+                print("Loading from cache failed...")
+                print(f"Querying {self.ollama_url}")
                 self.refresh()
         else:
+            print(f"Querying {self.ollama_url}")
             self.refresh()
 
     def save_to_cache(self):
@@ -206,6 +212,16 @@ class OllamaRemote:
         except Exception as e:
             print(f"Unexpected error: {str(e)}")
             return None
+
+
+# TODO: Write this class to accept an OllamaRemote and OllamaClient so that OllamaLibraryManager becomes an aggregator.
+class OllamaLibrary:
+    catalog: List[LanguageModel] = []
+    ollama_remote: OllamaRemote = None
+    ollama_client: Client = None
+
+    def __init__(self) -> None:
+        pass
 
 
 # Example usage

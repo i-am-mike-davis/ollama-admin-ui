@@ -1,0 +1,28 @@
+{% extends 'skeleton.html' %}
+{% block content %}
+<h1 class="text-blue-600 dark:text-sky-400">Models @ {{ollama_library.url}}</h1>
+    <table>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Link</th>
+            <th>Tags</th>
+        </tr>
+        </thead>
+        <tbody>
+    {% for model in ollama_library.models %}
+    <tr>
+        <td>{{ model.name }}</td>
+        <td>{{ model.short_description }}</td>
+        <td> <a href="{{model.link}}">Link</a> </td>
+        <td> 
+          {% for tag in model.tags %}
+          <input type="button" value="{{ tag }}" hx-swap="outerHTML" hx-target-error="#error-bar" hx-put="/download/{{ model.name }}?tag={{ tag }}" class="inline-flex my-1 items-center rounded-md bg-[#ddf4ff] px-2 py-[2px] text-xs font-medium text-blue-600 sm:text-[13px]">
+          {% endfor %}
+        </td>
+    </tr>
+    {% endfor %}
+        </tbody>
+
+{%endblock%}

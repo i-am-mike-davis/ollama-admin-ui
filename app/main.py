@@ -6,7 +6,7 @@ import os
 
 # third-party imports
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -45,28 +45,68 @@ except Exception as e:
     print(e)
 
 
+@app.put("/download/{model_name}")
+def put_download(request: Request, model_name: str, tag: str):
+    try:
+        oclient.pull(model=f"{model_name}:{tag}")
+    except Exception as e:
+        print(e)
+        # raise HTTPException(status_code=500, detail=f"{e}")
+        # return templates.TemplateResponse(
+        #     request=request,
+        #     name="button-downloaded.html",
+        #     context={"url": f"/delete/{model_name}={tag}"},
+        # )
+        # html = f"""
+        #     <button id="error-bar" class="visible bg-[#991b1b]">{e}</button>
+        #     """
+        return templates.TemplateResponse(
+            request=request,
+            name="error-bar.html",
+            context={"error_message": f"{e}"},
+            status_code=500,
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="button-downloaded.html",
+        context={"tag": f"{tag}", "url": f"/delete/{model_name}?tag={tag}"},
+    )
+
+
 # @app.get("/")
 # def read_root():
 #     return {"Hello": "World"}
-@app.get("/")
-def get_root(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+# @app.get("/")
+# def get_root(request: Request):
+#     return templates.TemplateResponse(request=request, name="index.html")
+#
+#
+# @app.get("/items/{id}", response_class=HTMLResponse)
+# async def read_item(request: Request, id: str):
+#     return templates.TemplateResponse(
+#         request=request, name="item.html", context={"id": id}
+#     )
+#
 
 
-@app.get("/items/{id}", response_class=HTMLResponse)
-async def read_item(request: Request, id: str):
-    return templates.TemplateResponse(
-        request=request, name="item.html", context={"id": id}
-    )
-
-
-@app.get("/remote", response_class=HTMLResponse)
-async def read_item(request: Request):
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
     return templates.TemplateResponse(
         request=request,
-        name="remote-library.html",
+        name="library.html",
         context={"ollama_library": ollama_library},
     )
+
+
+#
+# @app.get("/local", response_class=HTMLResponse)
+# async def read_item(request: Request):
+#     return templates.TemplateResponse(
+#         request=request,
+#         name="local.html",
+#         context={"ollama_library": ollama_library},
+#     )
 
 
 #

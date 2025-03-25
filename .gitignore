@@ -1,6 +1,6 @@
 # project files
 .env
-
+remote-library.json
 # Python-generated files
 __pycache__/
 *.py[oc]

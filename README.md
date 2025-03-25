@@ -29,11 +29,12 @@ uv run main.py
 - Generate new css using tailwindcss cli.
 
 ```
-tailwindcss --watch -i ./app/static/input.css -o ./app/static/output.css
+tailwindcss --watch -i ./app/static/css/input.css -o ./app/static/css/output.css
 ```
 
 ## About
 
+- <https://hypermedia.systems/extending-html-as-hypermedia/>
 Other user interfaces for ollama:
 
 - <https://itsfoss.com/ollama-web-ui-tools/>
