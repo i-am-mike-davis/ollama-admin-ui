@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from ollama import Client
+from ollama import Client, AsyncClient, ResponseError, ProgressResponse
 
 # local imports
 # import app. as lib
@@ -23,6 +23,7 @@ OLLAMA_ADDRESS = os.getenv("OLLAMA_ADDRESS")
 
 # Initialize the ollama client
 oclient = Client(host=OLLAMA_ADDRESS)
+aclient = AsyncClient(host=OLLAMA_ADDRESS)
 
 # Initialize the client to read the remote ollama library.
 try:
@@ -38,11 +39,6 @@ templates = Jinja2Templates(directory="templates")
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-try:
-    response = oclient.show("llama3.2")
-except Exception as e:
-    print(e)
 
 
 @app.put("/download/{model_name}")
