@@ -1,5 +1,3 @@
-# Initial generation with grok3 beta
-# website_fetcher.py
 import time
 import os
 import requests
@@ -15,6 +13,19 @@ from typing_extensions import TypedDict
 from pathlib import Path
 from dotenv import load_dotenv
 import json
+import importlib_resources  # https://github.com/wimglenn/resources-example/tree/main
+
+wollama_resource_dir = importlib_resources.files("wollama")
+wollama_cache_dir = wollama_resource_dir.joinpath("cache")
+
+# TODO::
+# - [ ] Setup logging.
+# - [ ] Setup test suite.
+# - [ ] Setup error handling.
+# - [ ] Add docstrings.
+# - [ ] Clean up comments.
+# - [ ] Clean up imports.
+# - [ ] Fix OllamaRegistry Cache dir logic.
 
 
 # NOTE: Ollama doesn't expose this class like ListResponse but I wish they would!
@@ -67,10 +78,11 @@ class Catalog(BaseModel):
     object_version: str: A versioning identifier for the catalog schema.
     """
 
+    name: str = "ollama-catalog"
     models: Dict[str, CatalogLLM] = {}
     object_version: str = "0.0.0"
 
-    def export_catalog(self, filepath: str) -> str:
+    def export_catalog(self, filepath: str):
         """
         Exports a JSON formatted file of the catalog.
         """
@@ -83,11 +95,38 @@ class Catalog(BaseModel):
         except Exception as e:
             print(e)
 
+    def save_to_cache(self, file_dir: str):
+        """
+        Exports a pickled Catalog object.
+        """
+        cache_filename: str = f"{self.name}-cache-{self.object_version}"
+        filepath = os.path.join(file_dir, cache_filename)
+        try:
+            # Open a file and use dump()
+            with open(filepath, "wb") as file:
+                # A new file will be created
+                pickle.dump(self, file)
+        except Exception as e:
+            print(e)
 
-#
+    def load_from_cache(self, file_dir: str):
+        """
+        Attempts to load the Catalog pickle object.
+        """
+        cache_filename: str = f"{self.name}-cache-{self.object_version}"
+        filepath = os.path.join(f"{file_dir}", f"{cache_filename}")
+        try:
+            # Open a file and use dump()
+            with open(filepath, "rb") as file:
+                # Call load method to deserialze
+                cached_catalog = pickle.load(file)
+                self.models = cached_catalog.models
+        except Exception as e:
+            print(e)
+            raise e
 
 
-class OllamaLocal:
+class OllamaManager:
     """
     A high level object for managing ollama models via an ollama python client.
 
@@ -97,7 +136,7 @@ class OllamaLocal:
     """
 
     def __init__(self, client: Client):
-        self.catalog = Catalog()
+        self.catalog = Catalog(name="local-ollama-catalog")
         self.ollama_client = client
         # Ask Ollama for currently installed models and tags.
         result: ListResponse = client.list()
@@ -173,7 +212,7 @@ class OllamaLocal:
             print(response)
 
 
-class OllamaRemote:
+class OllamaRegistry:
     """
     A high level object for representing ollama models available for download.
 
@@ -183,7 +222,7 @@ class OllamaRemote:
         url: str: The url of the ollama library.
         catalog: Catalog: A catalog object representing ollama models and tags.
         delay: int = 3: The delay in seconds which the object waits before issuing a request to the url.
-        cache_dir: str:  The file directory at which the catalog is saved as a pickle.
+        cache_dir: str = path/to/wollama/cache/:  The file directory at which the catalog is saved as a pickle.
     """
 
     #
@@ -196,11 +235,11 @@ class OllamaRemote:
         self,
         url: str = "https://ollama.com/library",
         delay: int = 3,
-        cache_dir: str = os.path.abspath("./remote-catalog-v1.json"),
+        cache_dir: str = wollama_cache_dir,
     ):
         self.url = url
         self.cache_dir = cache_dir
-        self.catalog: Catalog = Catalog()
+        self.catalog: Catalog = Catalog(name="remote-ollama-catalog")
         self.delay = delay
         # if os.path.exists(cache_dir):
         #     try:
@@ -216,20 +255,32 @@ class OllamaRemote:
         #     self.refresh()
 
     def save_to_cache(self):
-        # Open a file and use dump()
-        with open(self.cache_dir, "wb") as file:
-            # A new file will be created
-            pickle.dump(self, file)
+        catalog: Catalog = self.catalog
+        try:
+            catalog.save_to_cache(file_dir=wollama_cache_dir)
+        except Exception as e:
+            print(e)
+        # # Open a file and use dump()
+        # with open(self.cache_dir, "wb") as file:
+        #     # A new file will be created
+        #     pickle.dump(self, file)
 
     def load_from_cache(self):
         # Open the file in binary mode
-        with open(self.cache_dir, "rb") as file:
-            # Call load method to deserialze
-            cached_ollama_remote = pickle.load(file)
-            self.catalog = cached_ollama_remote.catalog
-            self.url = cached_ollama_remote.url
-            self.delay = cached_ollama_remote.delay
-            self.cache_dir = cached_ollama_remote.cache_dir
+        catalog: Catalog = self.catalog
+        try:
+            catalog.load_from_cache(file_dir=wollama_cache_dir)
+        except Exception as e:
+            print(e)
+            raise e
+
+        # with open(self.cache_dir, "rb") as file:
+        #     # Call load method to deserialze
+        #     cached_ollama_remote = pickle.load(file)
+        #     self.catalog = cached_ollama_remote.catalog
+        #     self.url = cached_ollama_remote.url
+        #     self.delay = cached_ollama_remote.delay
+        #     self.cache_dir = cached_ollama_remote.cache_dir
 
     def refresh(self):
         self.catalog = self.fetch_model_list(url=self.url)
@@ -388,17 +439,7 @@ class OllamaRemote:
             return None
 
 
-# TODO: Write this class to accept an OllamaRemote and OllamaClient so that OllamaLibraryManager becomes an aggregator.
-# class OllamaLibrary:
-#     library: LocalModelLibrary
-#     ollama_remote: OllamaRemote = None
-#     ollama_client: Client = None
-#
-#     def __init__(self) -> None:
-#         pass
-#
-
-# Example usage
+# TODO: Setup an actual test suite.
 if __name__ == "__main__":
     # Get environment variables
     dotenv_path = Path("../../.env")
@@ -410,7 +451,7 @@ if __name__ == "__main__":
     aclient = AsyncClient(host=OLLAMA_ADDRESS)
 
     # Test local library.
-    local_library = OllamaLocal(client=oclient)
+    local_library = OllamaManager(client=oclient)
     local_models = local_library.catalog.models
     # Test the function
     # ollama_remote = OllamaRemote()
@@ -433,12 +474,12 @@ Tags: {tags}
     # Test the remote
     # ollama_remote = OllamaRemote()
     # model_list = ollama_remote.models
-    ollama_remote = OllamaRemote()
-    ollama_remote.load_from_cache()
-    remote_catalog = ollama_remote.catalog
-    remote_catalog.export_catalog("./catalog.json")
+    ollama_remote = OllamaRegistry()
+    # ollama_remote.load_from_cache()
+    # remote_catalog = ollama_remote.catalog
+    # remote_catalog.export_catalog("./catalog.json")
     # ollama_remote.export_catalog("./catalog.json")
-    # ollama_remote.refresh()
+    ollama_remote.refresh()
     models = ollama_remote.catalog.models
     if models:
         print("URL: Locally installed models")
@@ -457,8 +498,3 @@ Tags: {tags}
     # try deleting a model.
     local_library.pull(model="llama3.2", tag="1b")
     local_library.delete(model="llama3.2", tag="1b")
-
-    # if remote_models:
-    #     print(f"URL: {ollama_remote.url}")
-    #     for model in model_list:
-    #         print(f"""

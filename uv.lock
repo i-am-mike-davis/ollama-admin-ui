@@ -221,6 +221,15 @@ wheels = [
 ]
 
 [[package]]
+name = "importlib-resources"
+version = "6.5.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461 },
+]
+
+[[package]]
 name = "jinja2"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -231,6 +240,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899 },
 ]
+
+[[package]]
+name = "log2d"
+version = "0.0.18"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/28/3c9bb7791111c8ae2720be673db8c26db283e6653d8b7d61931e57228306/log2d-0.0.18.tar.gz", hash = "sha256:e5ed3e2b5632ab6eeb0ec5ebf6c134f53e47e7834331154a20d898752ea1dc94", size = 11701 }
 
 [[package]]
 name = "markupsafe"
@@ -370,7 +385,9 @@ dependencies = [
     { name = "bs4" },
     { name = "dotenv" },
     { name = "fastapi" },
+    { name = "importlib-resources" },
     { name = "jinja2" },
+    { name = "log2d" },
     { name = "ollama" },
     { name = "requests" },
     { name = "uvicorn" },
@@ -387,7 +404,9 @@ requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fastapi", specifier = ">=0.115.11" },
+    { name = "importlib-resources", specifier = ">=6.5.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "log2d", specifier = ">=0.0.18" },
     { name = "ollama", specifier = ">=0.4.7" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "uvicorn", specifier = ">=0.34.0" },

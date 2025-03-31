@@ -1,1 +1,8 @@
-<input type="button" value="{{ tag }}" hx-swap="outerHTML" hx-target-error="#error-bar" hx-post="{{ url }}" class="inline-flex my-1 items-center rounded-md bg-[#65a30d] px-2 py-[2px] text-xs font-medium text-blue-600 sm:text-[13px]">
+<input
+  type="button"
+  value="{{ tag_name }}"
+  hx-swap="outerHTML"
+  hx-target-error="#error-bar"
+  hx-post="/delete/{{ model_name }}?tag={{ tag_name }}"
+  class="inline-flex my-1 items-center rounded-md bg-[#65a30d] px-2 py-[2px] text-xs font-medium text-blue-600 sm:text-[13px]"
+>
