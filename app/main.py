@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from ollama import Client, AsyncClient, ResponseError, ProgressResponse
 from log2d import Log
-
+from typing import List
 # local imports
 # import app. as lib
 
@@ -25,9 +25,15 @@ from wollama.wollama import (
     OllamaRegistry,
 )
 
+import asyncio
+import uuid
+
+context = {"jobs": {}}
+
 # TODO:
+# - [-] Get progress from ollama operations.
 # - [-] Setup logging.
-# - [ ] Setup error handling.
+# - [-] Setup error handling.
 # - [ ] Clean up comments.
 # - [ ] Make reading the environment variable more reliable.
 
@@ -57,7 +63,7 @@ oclient = Client(host=OLLAMA_ADDRESS)
 aclient = AsyncClient(host=OLLAMA_ADDRESS)
 
 # Initialize the OllamaManager to handle downloading and deleting models...
-omanager = OllamaManager(client=oclient)
+omanager = OllamaManager(client=oclient, aclient=aclient)
 
 # Initialize the OllamaRegistry client to read the remote ollama library.
 oregistry = OllamaRegistry()
@@ -82,8 +88,60 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.put("/draft/download/{model_name}")
+async def put_async_download(request: Request, model_name: str, tag: str):
+    if model_name in omanager.catalog.models.keys():
+        if tag in omanager.catalog.models[f"{model_name}"].tag_collection.tags.keys():
+            return templates.TemplateResponse(
+                request=request,
+                name="button-downloaded.html",
+                context={
+                    "tag_name": f"{tag}",
+                    "url": f"/delete/{model_name}?tag={tag}",
+                    "model_name": f"{model_name}",
+                },
+            )
+    identifier = await omanager.download_wrap(model=model_name, tag=tag)
+    # return {"identifier": identifier}
+    return templates.TemplateResponse(
+        request=request,
+        name="start-download.html",
+        context={
+            "tag_name": f"{tag}",
+            "url": f"/delete/{model_name}?tag={tag}",
+            "model_name": f"{model_name}",
+            "identifier": f"{identifier}",
+            "message": f"Initiating download of {model_name}:{tag}",
+        },
+    )
+    # return templates.TemplateResponse(
+    #     request=request,
+    #     name="error-bar.html",
+    #     context={"error_message": f"{e}"},
+    #     status_code=500,
+    # )
+
+
+@app.put("/create")
+async def create():
+    identifier = await omanager.do_work_wrap()
+    return {"identifier": identifier}
+
+
 @app.put("/download/{model_name}")
 def put_download(request: Request, model_name: str, tag: str):
+    if model_name in omanager.catalog.models.keys():
+        if tag in omanager.catalog.models["model_name"].tag_collection.tags.keys():
+            return templates.TemplateResponse(
+                request=request,
+                name="button-downloaded.html",
+                context={
+                    "tag_name": f"{tag}",
+                    "url": f"/delete/{model_name}?tag={tag}",
+                    "model_name": f"{model_name}",
+                },
+            )
+
     try:
         # oclient.pull(model=f"{model_name}:{tag}")
         log.info(f"Downloading {model_name}:{tag}")
@@ -119,7 +177,7 @@ def put_download(request: Request, model_name: str, tag: str):
 
 
 @app.post("/delete/{model_name}")
-def put_download(request: Request, model_name: str, tag: str):
+def post_delete(request: Request, model_name: str, tag: str):
     try:
         log.info(f"Deleting {model_name}:{tag}")
         omanager.delete(model=model_name, tag=tag)
@@ -138,7 +196,7 @@ def put_download(request: Request, model_name: str, tag: str):
         name="button-download.html",
         context={
             "tag_name": f"{tag}",
-            "url": f"/download/{model_name}?tag={tag}",
+            "url": f"/draft/download/{model_name}?tag={tag}",
             "model_name": f"{model_name}",
         },
     )
@@ -151,6 +209,75 @@ async def read_root(request: Request):
         name="library.html",
         context={"remote": oregistry.catalog, "local": omanager.catalog},
     )
+
+
+@app.get("/test", response_class=HTMLResponse)
+async def read_test(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="message.html",
+        context={"message": f"{str(uuid.uuid4())}test!"},
+    )
+
+
+@app.get("/time", response_class=HTMLResponse)
+async def read_time(request: Request):
+    import datetime
+    import time
+
+    now_time = time.time()
+    return templates.TemplateResponse(
+        request=request,
+        name="message-poll.html",
+        context={"message": f"Current Time{str(now_time)}"},
+    )
+
+
+# @app.post("/work/test")
+# async def testing(files: List[UploadFile]):
+#     identifier = str(uuid.uuid4())
+#     context[jobs][identifier] = {}
+#     asyncio.run_coroutine_threadsafe(
+#         do_work(identifier, files), loop=asyncio.get_running_loop()
+#     )
+#
+#     return {"identifier": identifier}
+#
+
+
+@app.get("/status")
+def status():
+    return {
+        "all": list(omanager.context["jobs"].values()),
+    }
+
+
+@app.get("/status/{identifier}")
+async def status(request: Request, identifier: str):
+    status = omanager.context["jobs"].get(
+        identifier, "job with that identifier is undefined"
+    )
+    finish_code = status["finish_code"]
+    status_message = status["status"]
+    if not status["status"] == "done":
+        return templates.TemplateResponse(
+            request=request,
+            name="message-poll.html",
+            context={
+                "identifier": f"{identifier}",
+                "message": f"{finish_code}: {status_message}",
+            },
+        )
+    else:
+        return templates.TemplateResponse(
+            request=request,
+            headers={"HX-Trigger": f"{finish_code}"},
+            name="message.html",
+            context={
+                "identifier": f"{identifier}",
+                "message": "Finished downloading!!",
+            },
+        )
 
 
 #

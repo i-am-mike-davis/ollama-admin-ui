@@ -1,0 +1,10 @@
+<div
+  hx-get="/status/{{ identifier }}"
+  hx-trigger="every 5s"
+  hx-swap="outerHTML"
+  DISABLED-_="on click remove me"
+  class="cursor-pointer"
+  title="click to dismiss"
+>
+  {{ message }}
+</div>

@@ -14,18 +14,26 @@ from pathlib import Path
 from dotenv import load_dotenv
 import json
 import importlib_resources  # https://github.com/wimglenn/resources-example/tree/main
+from log2d import Log
+import asyncio
+import uuid
+
 
 wollama_resource_dir = importlib_resources.files("wollama")
 wollama_cache_dir = wollama_resource_dir.joinpath("cache")
 
 # TODO::
-# - [ ] Setup logging.
+# - [-] Setup logging.
 # - [ ] Setup test suite.
 # - [ ] Setup error handling.
 # - [ ] Add docstrings.
 # - [ ] Clean up comments.
 # - [ ] Clean up imports.
 # - [ ] Fix OllamaRegistry Cache dir logic.
+
+log = Log(Path(__file__).stem).logger
+LOG_LEVEL = "INFO"
+log.setLevel(level=f"{LOG_LEVEL}")
 
 
 # NOTE: Ollama doesn't expose this class like ListResponse but I wish they would!
@@ -135,9 +143,12 @@ class OllamaManager:
         ollama_client Client: The ollama python client.
     """
 
-    def __init__(self, client: Client):
+    def __init__(self, client: Client, aclient: AsyncClient):
         self.catalog = Catalog(name="local-ollama-catalog")
         self.ollama_client = client
+        self.ollama_aclient = aclient
+        self.context = {"jobs": {}}
+
         # Ask Ollama for currently installed models and tags.
         result: ListResponse = client.list()
         for item in result.models:
@@ -165,14 +176,91 @@ class OllamaManager:
                 )
                 self.catalog.models[name] = new_model
 
+    def calling_back(self, message: str):
+        log.info(message)
+
+    async def do_work(self, job_key, files=None):
+        iter_over = files if files else range(40)
+        jobs = self.context["jobs"]
+        for file, file_number in enumerate(iter_over):
+            job_info = jobs[job_key]
+            job_info["iteration"] = file_number
+            job_info["status"] = "inprogress"
+            await asyncio.sleep(1)
+        jobs[job_key]["status"] = "done"
+        self.calling_back(f"Howdy doody from: {job_key}")
+
+    async def do_work_wrap(self):
+        identifier = str(uuid.uuid4())
+        self.context["jobs"][identifier] = {}
+        asyncio.run_coroutine_threadsafe(
+            self.do_work(identifier),
+            loop=asyncio.get_running_loop(),
+        )
+        return identifier
+
+    async def download(self, job_key, model: str, tag: str, finish_code: str):
+        jobs = self.context["jobs"]
+        try:
+            iter = 0
+            async for part in await self.ollama_aclient.pull(
+                f"{model}:{tag}", stream=True
+            ):
+                log.info(part)
+                iter += 1
+                job_info = jobs[job_key]
+                job_info["iteration"] = iter
+                job_info["status"] = f"{part}"
+                job_info["finish_code"] = finish_code
+        except Exception as e:
+            log.error(e)
+
+        self.add_to_catalog(model=model, tag=tag)
+        jobs[job_key]["status"] = "done"
+
+    async def download_wrap(self, model: str, tag: str):
+        identifier = str(uuid.uuid4())
+        self.context["jobs"][identifier] = {}
+        asyncio.run_coroutine_threadsafe(
+            self.download(
+                identifier, model=model, tag=tag, finish_code=f"{model}:{tag}"
+            ),
+            loop=asyncio.get_running_loop(),
+        )
+        return identifier
+
+    def add_to_catalog(self, model: str, tag: str):
+        try:
+            new_model_tag = ModelTag(name=tag)
+            if model in self.catalog.models.keys():
+                catalog_model = self.catalog.models[f"{model}"]
+                tag_collection = catalog_model.tag_collection
+                if tag in tag_collection.tags.keys():
+                    # tag was already in the library so do nothing.
+                    pass
+                else:
+                    tag_collection.tags[f"{tag}"] = new_model_tag
+            else:
+                # new model in the catalog
+                new_tag_collection = ModelTagCollection()
+                new_tag_collection.tags[f"{tag}"] = new_model_tag
+                new_model = CatalogLLM(name=model, tag_collection=new_tag_collection)
+                self.catalog.models[f"{model}"] = new_model
+        except Exception as e:
+            log.error(e)
+
     def pull(self, model: str, tag: str):
         try:
-            response: StatusResponse = self.ollama_client.pull(f"{model}:{tag}")
+            response: StatusResponse = self.ollama_client.pull(
+                f"{model}:{tag}", stream=True
+            )
+            for message in response:
+                log.info(message)
 
         except Exception as e:
             print(e)
-            print(response)
-        if response.status == "success":
+            print(message)
+        if message.status == "success":
             try:
                 new_model_tag = ModelTag(name=tag)
                 if model in self.catalog.models.keys():
