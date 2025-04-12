@@ -17,7 +17,7 @@ import importlib_resources  # https://github.com/wimglenn/resources-example/tree
 from log2d import Log
 import asyncio
 import uuid
-
+import aiohttp
 
 wollama_resource_dir = importlib_resources.files("wollama")
 wollama_cache_dir = wollama_resource_dir.joinpath("cache")
@@ -34,6 +34,31 @@ wollama_cache_dir = wollama_resource_dir.joinpath("cache")
 log = Log(Path(__file__).stem).logger
 LOG_LEVEL = "INFO"
 log.setLevel(level=f"{LOG_LEVEL}")
+
+mock_job_stack = {"jobs": {}}
+
+
+async def mock_initiate_work(job_stack: dict, finish_code: str):
+    identifier = str(uuid.uuid4())
+    job_stack["jobs"][identifier] = {}
+    job_stack["jobs"][identifier]["finish_code"] = finish_code
+    job_stack["jobs"][identifier]["status"] = "Starting"
+    asyncio.run_coroutine_threadsafe(
+        mock_do_work(job_stack, identifier),
+        loop=asyncio.get_running_loop(),
+    )
+    return identifier
+
+
+async def mock_do_work(job_stack: dict, job_key: str):
+    iter_over = range(40)
+    jobs = job_stack["jobs"]
+    for file, file_number in enumerate(iter_over):
+        job_info = jobs[job_key]
+        job_info["iteration"] = file_number
+        job_info["status"] = "inprogress"
+        await asyncio.sleep(1)
+    jobs[job_key]["status"] = "done"
 
 
 # NOTE: Ollama doesn't expose this class like ListResponse but I wish they would!
@@ -101,7 +126,7 @@ class Catalog(BaseModel):
                 file.write(json_string)
                 # json.dump(obj=self, fp=file, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
 
     def save_to_cache(self, file_dir: str):
         """
@@ -115,7 +140,7 @@ class Catalog(BaseModel):
                 # A new file will be created
                 pickle.dump(self, file)
         except Exception as e:
-            print(e)
+            log.error(e)
 
     def load_from_cache(self, file_dir: str):
         """
@@ -130,7 +155,7 @@ class Catalog(BaseModel):
                 cached_catalog = pickle.load(file)
                 self.models = cached_catalog.models
         except Exception as e:
-            print(e)
+            log.error(e)
             raise e
 
 
@@ -258,8 +283,8 @@ class OllamaManager:
                 log.info(message)
 
         except Exception as e:
-            print(e)
-            print(message)
+            log.error(e)
+            log.error(message)
         if message.status == "success":
             try:
                 new_model_tag = ModelTag(name=tag)
@@ -280,8 +305,8 @@ class OllamaManager:
                     )
                     self.catalog.models[f"{model}"] = new_model
             except Exception as e:
-                print(e)
-                print(response)
+                log.error(e)
+                log.error(response)
         else:
             raise Exception(f"Could not download {model}:{tag}")
 
@@ -289,15 +314,15 @@ class OllamaManager:
         try:
             response: StatusResponse = self.ollama_client.delete(f"{model}:{tag}")
         except Exception as e:
-            print(e)
-            print(response)
+            log.error(e)
+            log.error(response)
         try:
             model = self.catalog.models[f"{model}"]
             tag_collection = model.tag_collection
             tag_collection.tags.pop(f"{tag}")
         except Exception as e:
-            print(e)
-            print(response)
+            log.error(e)
+            log.error(response)
 
 
 class OllamaRegistry:
@@ -329,6 +354,7 @@ class OllamaRegistry:
         self.cache_dir = cache_dir
         self.catalog: Catalog = Catalog(name="remote-ollama-catalog")
         self.delay = delay
+        self.context = {"jobs": {}}
         # if os.path.exists(cache_dir):
         #     try:
         #         print("Attempting to load catalog from cache")
@@ -347,7 +373,7 @@ class OllamaRegistry:
         try:
             catalog.save_to_cache(file_dir=wollama_cache_dir)
         except Exception as e:
-            print(e)
+            log.error(e)
         # # Open a file and use dump()
         # with open(self.cache_dir, "wb") as file:
         #     # A new file will be created
@@ -359,7 +385,7 @@ class OllamaRegistry:
         try:
             catalog.load_from_cache(file_dir=wollama_cache_dir)
         except Exception as e:
-            print(e)
+            log.error(e)
             raise e
 
         # with open(self.cache_dir, "rb") as file:
@@ -370,9 +396,117 @@ class OllamaRegistry:
         #     self.delay = cached_ollama_remote.delay
         #     self.cache_dir = cached_ollama_remote.cache_dir
 
+    async def do_work(self, job_key, files=None):
+        iter_over = files if files else range(40)
+        jobs = self.context["jobs"]
+        for file, file_number in enumerate(iter_over):
+            job_info = jobs[job_key]
+            job_info["iteration"] = file_number
+            job_info["status"] = "inprogress"
+            await asyncio.sleep(1)
+        jobs[job_key]["status"] = "done"
+        self.calling_back(f"Howdy doody from: {job_key}")
+
+    async def arefresh(self):
+        identifier = str(uuid.uuid4())
+        job_type = "refresh-library"
+        self.context["jobs"][identifier] = {}
+        self.context["jobs"][identifier]["finish_code"] = (
+            "Finished refreshing the library!"
+        )
+
+        asyncio.run_coroutine_threadsafe(
+            self.afetch_model_list(url=self.url, job_id=identifier),
+            loop=asyncio.get_running_loop(),
+        )
+        # self.catalog = self.afetch_model_list(url=self.url)
+        return identifier
+        # self.save_to_cache()
+
     def refresh(self):
         self.catalog = self.fetch_model_list(url=self.url)
         self.save_to_cache()
+
+    async def afetch_tags(
+        self, model_name: str = None, timeout: int = 10
+    ) -> ModelTagCollection:
+        """
+        Fetches the model tags from the remote model library.
+
+        Args:
+            url (str): The URL of the website to fetch, defaults to https://ollama.com/library
+            timeout (int): Request timeout in seconds (default: 10)
+
+        Returns:
+            ModelTagCollection
+
+        Raises:
+            ValueError: If URL is invalid or empty
+        """
+
+        # Creating a URL
+        yarl_url = URL(f"{self.url}")
+        log.debug(yarl_url.host)  # 'example.com'
+        log.debug(yarl_url.path)  # '/path/to/resource'# Adding query parameters
+        yarl_url = yarl_url.with_path(f"/library/{model_name}")
+        url = str(yarl_url)
+        log.debug(url)  # 'https://example.com/new/path?key=value&param=other'
+
+        # Input validation
+        if not url or not isinstance(url, str):
+            raise ValueError("URL must be a non-empty string")
+
+        # Ensure URL has a scheme
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        # Validate URL format
+        try:
+            url_parse = urllib.parse.urlparse(url)
+            if not all([url_parse.scheme, url_parse.netloc]):
+                raise ValueError("Invalid URL format")
+        except Exception:
+            raise ValueError("Invalid URL format")
+
+        try:
+            # Fetch the website
+            # response = requests.get(url, headers=headers, timeout=timeout)
+            # time.sleep(self.delay)
+            # response = requests.get(url, timeout=timeout)
+            await asyncio.sleep(self.delay)
+            # response = requests.get(url, timeout=timeout)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{url}") as response:
+                    response.raise_for_status()
+                    text = await response.text(encoding="utf-8")
+                    # Parse HTML with BeautifulSoup
+                    soup = BeautifulSoup(text, "html.parser")
+                    # https://realpython.com/beautiful-soup-web-scraper-python/#step-3-parse-html-code-with-beautiful-soup
+                    # Note: You’ll want to pass .content instead of .text to avoid problems with character encoding. The .content attribute holds raw bytes, which Python’s built-in HTML parser can decode better than the text representation you printed earlier using the .text attribute.
+
+            # now get all the anchor tags
+            results = soup.find_all("a")
+
+            # now iterate and extract the model urls..
+            tag_collection = ModelTagCollection()
+            for result in results:
+                # Save the tags.
+                if f"/library/{model_name}:" in result["href"]:
+                    new_tag = ModelTag()
+                    tag_url = URL(result["href"]).path
+                    result = tag_url.split(":")[-1]
+                    new_tag.name = result
+                    new_tag.link = tag_url
+                    tag_collection.tags[f"{new_tag.name}"] = new_tag
+
+            return tag_collection
+
+        except requests.exceptions.RequestException as e:
+            log.error(f"Error fetching website: {str(e)}")
+            return ModelTagCollection()
+        except Exception as e:
+            log.error(f"Unexpected error: {str(e)}")
+            return ModelTagCollection()
 
     def fetch_tags(
         self, model_name: str = None, timeout: int = 10
@@ -393,11 +527,11 @@ class OllamaRegistry:
 
         # Creating a URL
         yarl_url = URL(f"{self.url}")
-        print(yarl_url.host)  # 'example.com'
-        print(yarl_url.path)  # '/path/to/resource'# Adding query parameters
+        log.debug(yarl_url.host)  # 'example.com'
+        log.debug(yarl_url.path)  # '/path/to/resource'# Adding query parameters
         yarl_url = yarl_url.with_path(f"/library/{model_name}")
         url = str(yarl_url)
-        print(url)  # 'https://example.com/new/path?key=value&param=other'
+        log.debug(url)  # 'https://example.com/new/path?key=value&param=other'
 
         # Input validation
         if not url or not isinstance(url, str):
@@ -445,11 +579,106 @@ class OllamaRegistry:
             return tag_collection
 
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching website: {str(e)}")
+            log.error(f"Error fetching website: {str(e)}")
             return None
         except Exception as e:
-            print(f"Unexpected error: {str(e)}")
+            log.error(f"Unexpected error: {str(e)}")
             return None
+
+    async def afetch_model_list(
+        self, url: str, job_id: str, timeout: int = 10
+    ) -> Catalog:
+        """
+        Fetches the model cards from the remote model library.
+
+        Args:
+            url (str): The URL of the website to fetch, defaults to https://ollama.com/library
+            timeout (int): Request timeout in seconds (default: 10)
+
+        Returns:
+            Catalog
+
+        Raises:
+            ValueError: If URL is invalid or empty
+        """
+        jobs = self.context["jobs"]
+        job_info = jobs[job_id]
+        job_info["status"] = "Preparing to fetch model and tag metadata..."
+        # Input validation
+        if not url or not isinstance(url, str):
+            raise ValueError("URL must be a non-empty string")
+
+        # Ensure URL has a scheme
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        # Validate URL format
+        try:
+            url_parse = urllib.parse.urlparse(url)
+            if not all([url_parse.scheme, url_parse.netloc]):
+                raise ValueError("Invalid URL format")
+        except Exception:
+            raise ValueError("Invalid URL format")
+
+        try:
+            # Fetch the website
+            # response = requests.get(url, headers=headers, timeout=timeout)
+            await asyncio.sleep(self.delay)
+            # response = requests.get(url, timeout=timeout)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{url}") as response:
+                    response.raise_for_status()
+                    text = await response.text(encoding="utf-8")
+                    # Raise exception for bad status codes
+                    # Parse HTML with BeautifulSoup
+                    soup = BeautifulSoup(text, "html.parser")
+                    # https://realpython.com/beautiful-soup-web-scraper-python/#step-3-parse-html-code-with-beautiful-soup
+                    # Note: You’ll want to pass .content instead of .text to avoid problems with character encoding. The .content attribute holds raw bytes, which Python’s built-in HTML parser can decode better than the text representation you printed earlier using the .text attribute.
+
+            # Try to get the repo div...
+            results = soup.find(id="repo")
+            # Now try to get the list
+            results = results.find(role="list")
+
+            # now get all the anchor tags
+            results = results.find_all("a")
+
+            # now iterate and extract the model urls..
+            catalog = Catalog()
+            models = catalog.models
+            for result in results:
+                # Save the tags.
+                description_stub = result.find("p").text
+                link_stub = result["href"]
+                name_stub = link_stub.split("/")[-1]
+                try:
+                    tag_collection = await self.afetch_tags(model_name=name_stub)
+                except Exception as e:
+                    log.error(f"Trouble pulling tags for {name_stub}")
+                    log.error(f"{e}")
+                    tag_collection = ModelTagCollection()
+                new_model = CatalogLLM(
+                    name=name_stub,
+                    link=f"{url_parse.scheme}://{url_parse.netloc}{link_stub}",
+                    short_description=f"{description_stub}",
+                    tag_collection=tag_collection,
+                )
+                models[f"{new_model.name}"] = new_model
+                job_info["iteration"] = "Null"
+                status = f"Retrieved {name_stub} metadata..."
+                job_info["status"] = status
+                log.info(f"{status}")
+            job_info["status"] = "done"
+            self.catalog = catalog
+            self.save_to_cache()
+            return catalog
+
+        except requests.exceptions.RequestException as e:
+            log.error(f"Error fetching website: {str(e)}")
+            return self.catalog
+        except Exception as e:
+            log.error(f"Unexpected error: {str(e)}")
+            return self.catalog
 
     def fetch_model_list(self, url: str, timeout: int = 10) -> Catalog:
         """
@@ -520,10 +749,10 @@ class OllamaRegistry:
             return catalog
 
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching website: {str(e)}")
+            log.error(f"Error fetching website: {str(e)}")
             return None
         except Exception as e:
-            print(f"Unexpected error: {str(e)}")
+            log.error(f"Unexpected error: {str(e)}")
             return None
 
 

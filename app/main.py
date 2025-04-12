@@ -23,6 +23,9 @@ from wollama.wollama import (
     OllamaManager,
     OllamaInfo,
     OllamaRegistry,
+    mock_job_stack,
+    mock_do_work,
+    mock_initiate_work,
 )
 
 import asyncio
@@ -112,6 +115,7 @@ async def put_async_download(request: Request, model_name: str, tag: str):
             "model_name": f"{model_name}",
             "identifier": f"{identifier}",
             "message": f"Initiating download of {model_name}:{tag}",
+            "job_type": "download-model",
         },
     )
     # return templates.TemplateResponse(
@@ -174,6 +178,52 @@ def put_download(request: Request, model_name: str, tag: str):
             "model_name": f"{model_name}",
         },
     )
+
+
+# TODO: Parametize the finish code
+# TODO: Rename finish code to finish message
+@app.post("/refresh-library")
+async def post_refresh(request: Request):
+    # identifier = await oregistry.arefresh()
+    finish_code = "refresh-library"
+    identifier = await mock_initiate_work(
+        job_stack=mock_job_stack, finish_code=finish_code
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="start-library-refresh.html",
+        context={
+            "button_value": "Refreshing...",
+            "tag_name": "Refreshing the library...",
+            "url": f"/finished/{finish_code}",
+            "model_name": "N/A",
+            "identifier": f"{identifier}",
+            "job_type": f"{finish_code}",
+            "message": "Initiating refresh of remote catalog",
+        },
+    )
+
+
+@app.get("/finished/{job_type}")
+async def read_finished(request: Request, job_type: str):
+    # identifier = await oregistry.arefresh()
+    #
+    if job_type == "refresh-library":
+        return HTMLResponse(headers={"HX-Redirect": "/"})
+        # return templates.TemplateResponse(
+        #     request=request,
+        #     name="refresh-library.html",
+        #     context={
+        #         "button_value": "Refreshing...",
+        #         "tag_name": "Refreshing the library...",
+        #         "url": "/static/refresh-library.html",
+        #         "model_name": "N/A",
+        #         "identifier": f"{identifier}",
+        #         "job_type": f"{finish_code}",
+        #         "message": "Initiating refresh of remote catalog",
+        #     },
+        # )
+        #
 
 
 @app.post("/delete/{model_name}")
@@ -252,32 +302,66 @@ def status():
     }
 
 
-@app.get("/status/{identifier}")
-async def status(request: Request, identifier: str):
-    status = omanager.context["jobs"].get(
-        identifier, "job with that identifier is undefined"
-    )
-    finish_code = status["finish_code"]
-    status_message = status["status"]
-    if not status["status"] == "done":
-        return templates.TemplateResponse(
-            request=request,
-            name="message-poll.html",
-            context={
-                "identifier": f"{identifier}",
-                "message": f"{finish_code}: {status_message}",
-            },
+@app.get("/status/{job_type}/{identifier}")
+async def status(request: Request, job_type: str, identifier: str):
+    if job_type == "download-model":
+        status = omanager.context["jobs"].get(
+            identifier, "job with that identifier is undefined"
         )
-    else:
-        return templates.TemplateResponse(
-            request=request,
-            headers={"HX-Trigger": f"{finish_code}"},
-            name="message.html",
-            context={
-                "identifier": f"{identifier}",
-                "message": "Finished downloading!!",
-            },
-        )
+        finish_code = status["finish_code"]
+        status_message = status["status"]
+        if not status["status"] == "done":
+            return templates.TemplateResponse(
+                request=request,
+                name="message-poll.html",
+                context={
+                    "identifier": f"{identifier}",
+                    "message": f"{finish_code}: {status_message}",
+                },
+            )
+        else:
+            return templates.TemplateResponse(
+                request=request,
+                headers={"HX-Trigger": f"{finish_code}"},
+                name="message.html",
+                context={
+                    "identifier": f"{identifier}",
+                    "message": "Finished downloading!!",
+                    "job_type": "download-model",
+                },
+            )
+    elif job_type == "refresh-library":
+        try:
+            status = oregistry.context["jobs"].get(
+                identifier, "job with that identifier is undefined"
+            )
+            status = mock_job_stack["jobs"].get(identifier, "job undefined...")
+            finish_code = status["finish_code"]
+            status_message = status["status"]
+        except Exception as e:
+            log.error(f"{e}")
+            finish_code = job_type
+            status_message = "Something went wrong!"
+        if not status_message == "done":
+            return templates.TemplateResponse(
+                request=request,
+                name="message-poll.html",
+                context={
+                    "identifier": f"{identifier}",
+                    "message": f"Refreshing the model catalog: {status_message}",
+                    "job_type": f"{job_type}",
+                },
+            )
+        else:
+            return templates.TemplateResponse(
+                request=request,
+                headers={"HX-Trigger": f"{finish_code}"},
+                name="message.html",
+                context={
+                    "identifier": f"{identifier}",
+                    "message": "Finished downloading!",
+                },
+            )
 
 
 #
