@@ -72,11 +72,19 @@ else:
 
 
 # Initialize the ollama client
-oclient = Client(host=OLLAMA_ADDRESS)
-aclient = AsyncClient(host=OLLAMA_ADDRESS)
+try:
+    oclient = Client(host=OLLAMA_ADDRESS)
+    aclient = AsyncClient(host=OLLAMA_ADDRESS)
+except Exception as e:
+    log.error("Could not connect to ollama!")
+    log.error(f"{e}")
 
 # Initialize the OllamaManager to handle downloading and deleting models...
-omanager = OllamaManager(client=oclient, aclient=aclient)
+try:
+    omanager = OllamaManager(client=oclient, aclient=aclient)
+except Exception as e:
+    log.error("Could not instantiate Ollama Manager.")
+    log.error(f"{e}")
 
 # Initialize the OllamaRegistry client to read the remote ollama library.
 oregistry = OllamaRegistry()
@@ -197,10 +205,19 @@ def post_delete(request: Request, model_name: str, tag: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    try:
+        remote = oregistry.catalog
+        local = omanager.catalog
+    except Exception as e:
+        return HTMLResponse(
+            content=f"""
+            FATAL ERROR: Most likely the server cannot talk to Ollama at:'{OLLAMA_ADDRESS}'             |            Error exception: {e}"
+            """
+        )
     return templates.TemplateResponse(
         request=request,
         name="library.html",
-        context={"remote": oregistry.catalog, "local": omanager.catalog},
+        context={"remote": remote, "local": local},
     )
 
 
