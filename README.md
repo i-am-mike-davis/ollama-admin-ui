@@ -27,6 +27,7 @@ uv run main.py
 
 - Use Tailwindcss utility classes in html.
 - Generate new css using tailwindcss cli.
+- [heroicons](https://heroicons.com/)
 
 ```
 tailwindcss --watch -i ./app/static/css/input.css -o ./app/static/css/output.css

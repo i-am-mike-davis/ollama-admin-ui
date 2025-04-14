@@ -1,7 +1,6 @@
 {% extends 'skeleton.html' %}
 {% block content %}
 <h1 class="text-blue-600 dark:text-sky-400"></h1>
-{% include "refresh-library.html" %}
    <table>
         <thead>
         <tr>
@@ -14,7 +13,7 @@
             {% for model in remote.models.values() %}
               <tr>
                   {% set model_name = model.name %}
-                  <td><a href="{{ model.link }}">{{ model.name }}</a></td>
+                  <td><a href="{{ model.link }}" target="_blank" class="font-bold">{{ model.name }}</a></td>
                   <td>{{ model.short_description }}</td>
                   <td> 
                     {% for tag in model.tag_collection.tags.values() %}

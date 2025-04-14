@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="">
   <head>
-    <title>Ollama Web Admin</title>
+    <title>Ollama Admin UI</title>
     <link rel="stylesheet" href="/static/css/output.css">
     <!-- https://htmx.org/docs/ -->
     <script src="/static/js/htmx-2.0.4.js"></script>
@@ -17,11 +17,107 @@
   <!-- <body hx-boost="true"> -->
   <body hx-ext="response-targets">
     <main>
+      <header class="sticky top-0 z-40 bg-white underline-offset-4 lg:static">
+        <nav class="flex w-full items-center justify-between px-6 py-3.5">
+          <div class="flex items-left, justify-between">
+            <a href="/" class="z-50">
+              <img src="/static/ollama.png" class="w-8" alt="Ollama">
+            </a>
+            <div class="mx-2 tracking-tight">
+              <h1 class="mx-auto max-w-sm md:max-w-md text-2xl font-medium tracking-tight md:text-3xl">
+                Ollama Admin UI
+                <!-- <sub-title>A simple administration interface for your ollama inference server.</sub-title> -->
+              </h1>
+              <sub-title class="italic">Manage Your Large Language Models</sub-title>
+            </div>
+          </div>
+          <!-- <div class="hidden lg:flex xl:flex-1 items-center space-x-6 ml-6 mr-6 xl:mr-0 text-lg"> -->
+          <!--   <a class="hover:underline focus:underline focus:outline-none focus:ring-0" target="_blank" href="https://discord.com/invite/ollama">Discord</a> -->
+          <!--   <a class="hover:underline focus:underline focus:outline-none focus:ring-0" target="_blank" href="https://github.com/ollama/ollama">GitHub</a> -->
+          <!--   <a class="hover:underline focus:underline focus:outline-none focus:ring-0" href="/models">Models</a> -->
+          <!-- </div> -->
+          <!-- <div class="flex-grow justify-center items-center hidden lg:flex xl:-ml-8"> -->
+          <!--   <div class="relative w-full xl:max-w-[28rem]"> -->
+          <!--     <form action="/search" autocomplete="off"> -->
+          <!--       <div class="relative flex w-full appearance-none bg-black/5 border border-neutral-100 items-center rounded-full" hx-on:focusout=" -->
+          <!--   if (!this.contains(event.relatedTarget)) { -->
+          <!--     const searchPreview = document.querySelector('#searchpreview'); -->
+          <!--     if (searchPreview) { -->
+          <!--       htmx.addClass('#searchpreview', 'hidden'); -->
+          <!--     } -->
+          <!--   } -->
+          <!-- "> -->
+          <!--         <span id="searchIcon" class="pl-2 text-2xl text-neutral-500"> -->
+          <!--           <svg class="mt-0.25 ml-1.5 h-5 w-5 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"> -->
+          <!--             <path d="m8.5 3c3.0375661 0 5.5 2.46243388 5.5 5.5 0 1.24832096-.4158777 2.3995085-1.1166416 3.3225711l4.1469717 4.1470988c.2928932.2928932.2928932.767767 0 1.0606602-.2662666.2662665-.6829303.2904726-.9765418.0726181l-.0841184-.0726181-4.1470988-4.1469717c-.9230626.7007639-2.07425014 1.1166416-3.3225711 1.1166416-3.03756612 0-5.5-2.4624339-5.5-5.5 0-3.03756612 2.46243388-5.5 5.5-5.5zm0 1.5c-2.209139 0-4 1.790861-4 4s1.790861 4 4 4 4-1.790861 4-4-1.790861-4-4-4z"></path> -->
+          <!--           </svg> -->
+          <!--         </span> -->
+          <!--         <input id="search" hx-get="/search" hx-trigger="keyup changed delay:100ms, focus" hx-target="#searchpreview" hx-swap="innerHTML" name="q" class="resize-none rounded-full border-0 py-2.5 bg-transparent text-sm w-full placeholder:text-neutral-500 focus:outline-none focus:ring-0" placeholder="Search models" autocomplete="off" hx-on:keydown=" -->
+          <!--   if (event.key === 'Enter') { -->
+          <!--     event.preventDefault(); -->
+          <!--     window.location.href = '/search?q=' + encodeURIComponent(this.value); -->
+          <!--     return; -->
+          <!--   } -->
+          <!--   if (event.key === 'Escape') { -->
+          <!--     event.preventDefault(); -->
+          <!--     this.value = ''; -->
+          <!--     this.blur(); -->
+          <!--     htmx.addClass('#searchpreview', 'hidden'); -->
+          <!--     return; -->
+          <!--   } -->
+          <!--   if (event.key === 'Tab') {  -->
+          <!--     htmx.addClass('#searchpreview', 'hidden'); -->
+          <!--     return; -->
+          <!--   } -->
+          <!--   if (event.key === 'ArrowDown') { -->
+          <!--     let first = document.querySelector('#search-preview-list a:first-of-type'); -->
+          <!--     first?.focus(); -->
+          <!--     event.preventDefault(); -->
+          <!--   } -->
+          <!--   if (event.key === 'ArrowUp') { -->
+          <!--     let last = document.querySelector('#view-all-link'); -->
+          <!--     last?.focus(); -->
+          <!--     event.preventDefault(); -->
+          <!--   } -->
+          <!--   htmx.removeClass('#searchpreview', 'hidden'); -->
+          <!-- " hx-on:focus=" -->
+          <!--   htmx.removeClass('#searchpreview', 'hidden') -->
+          <!-- "> -->
+          <!--         <div id="searchpreview" class="hidden absolute left-0 right-0 top-12 z-50" style="width: calc(100% + 2px); margin-left: -1px;"></div> -->
+          <!--       </div> -->
+          <!--     </form> -->
+          <!--   </div> -->
+          <!-- </div> -->
+          <!-- <div class="hidden lg:flex xl:flex-1 items-center space-x-2 justify-end ml-6 xl:ml-0"> -->
+          <!--   <a class="flex cursor-pointer items-center rounded-full bg-white border border-neutral-300 text-lg px-4 py-1 text-black hover:bg-neutral-50 whitespace-nowrap focus:bg-neutral-50" href="/signin">Sign in</a> -->
+          <!--   <a class="flex cursor-pointer items-center rounded-full bg-neutral-800 text-lg px-4 py-1 text-white hover:bg-black whitespace-nowrap focus:bg-black" href="/download">Download</a> -->
+          <!-- </div> -->
+          <!-- <div class="lg:hidden flex items-center"> -->
+          <!--   <input type="checkbox" id="menu" class="peer hidden"> -->
+          <!--   <label for="menu" class="z-50 cursor-pointer peer-checked:hidden block"> -->
+          <!--     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"> -->
+          <!--       <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path> -->
+          <!--     </svg> -->
+          <!--   </label> -->
+          <!--   <label for="menu" class="z-50 cursor-pointer hidden peer-checked:block fixed top-4 right-6"> -->
+          <!--     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"> -->
+          <!--       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path> -->
+          <!--     </svg> -->
+          <!--   </label> -->
+          <!--   <div class="fixed inset-0 bg-white z-40 hidden peer-checked:block overflow-y-auto"> -->
+          <!--     <div class="flex flex-col space-y-5 pt-[5.5rem] text-3xl"> -->
+          <!--       <a class="px-6" href="/models">Models</a> -->
+          <!--       <a class="px-6" href="https://discord.com/invite/ollama">Discord</a> -->
+          <!--       <a class="px-6" href="https://github.com/ollama/ollama">GitHub</a> -->
+          <!--       <a class="px-6" href="/download">Download</a> -->
+          <!--       <a href="/signin" class="block px-6">Sign in</a> -->
+          <!--     </div> -->
+          <!--   </div> -->
+          <!-- </div> -->
+          {% include "refresh-library.html" %}
+        </nav>
+      </header>
       <header>
-        <h1>
-          <all-caps>Ollama Web Admin</all-caps>
-          <sub-title>A simple administration interface for your ollama inference server.</sub-title>
-        </h1>
         <p id="error-bar" class="invisible">Error Bar</p>
         {% include "messages.html" %}
       </header>

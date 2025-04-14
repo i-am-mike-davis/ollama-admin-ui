@@ -7,15 +7,16 @@ import os
 # third-party imports
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from ollama import Client, AsyncClient, ResponseError, ProgressResponse
 from log2d import Log
 from typing import List
+
 # local imports
 # import app. as lib
-
+import string
 from wollama.wollama import (
     Catalog,
     ModelTag,
@@ -44,8 +45,6 @@ context = {"jobs": {}}
 dotenv_path = Path("../.env")
 load_dotenv(dotenv_path=dotenv_path)
 
-OLLAMA_ADDRESS = os.getenv("OLLAMA_ADDRESS")
-
 # Initialize logger.
 log = Log(Path(__file__).stem).logger
 LOG_LEVEL = "WARNING"
@@ -60,6 +59,18 @@ except Exception as e:
         f"Did not detect a log level specified in the environment file, using default: {LOG_LEVEL}"
     )
     log.warning(e)
+
+OLLAMA_ADDRESS = os.getenv("OLLAMA_ADDRESS")
+
+MOCK_REMOTE_TRAFFIC = os.getenv("MOCK_REMOTE_TRAFFIC")
+
+if MOCK_REMOTE_TRAFFIC.upper() == "TRUE":
+    log.debug("Mocking remote traffic!")
+    log.warning("Mocking remote traffic!")
+    MOCK_REMOTE_TRAFFIC = True
+else:
+    MOCK_REMOTE_TRAFFIC = False
+
 
 # Initialize the ollama client
 oclient = Client(host=OLLAMA_ADDRESS)
@@ -93,6 +104,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.put("/draft/download/{model_name}")
 async def put_async_download(request: Request, model_name: str, tag: str):
+    finish_code = f"{model_name}:{tag}"
     if model_name in omanager.catalog.models.keys():
         if tag in omanager.catalog.models[f"{model_name}"].tag_collection.tags.keys():
             return templates.TemplateResponse(
@@ -104,7 +116,12 @@ async def put_async_download(request: Request, model_name: str, tag: str):
                     "model_name": f"{model_name}",
                 },
             )
-    identifier = await omanager.download_wrap(model=model_name, tag=tag)
+    if MOCK_REMOTE_TRAFFIC:
+        identifier = await mock_initiate_work(
+            job_stack=mock_job_stack, finish_code=finish_code
+        )
+    else:
+        identifier = await omanager.download_wrap(model=model_name, tag=tag)
     # return {"identifier": identifier}
     return templates.TemplateResponse(
         request=request,
@@ -184,11 +201,13 @@ def put_download(request: Request, model_name: str, tag: str):
 # TODO: Rename finish code to finish message
 @app.post("/refresh-library")
 async def post_refresh(request: Request):
-    # identifier = await oregistry.arefresh()
     finish_code = "refresh-library"
-    identifier = await mock_initiate_work(
-        job_stack=mock_job_stack, finish_code=finish_code
-    )
+    if MOCK_REMOTE_TRAFFIC:
+        identifier = await mock_initiate_work(
+            job_stack=mock_job_stack, finish_code=finish_code
+        )
+    else:
+        identifier = await oregistry.arefresh()
     return templates.TemplateResponse(
         request=request,
         name="start-library-refresh.html",
@@ -295,19 +314,20 @@ async def read_time(request: Request):
 #
 
 
-@app.get("/status")
-def status():
-    return {
-        "all": list(omanager.context["jobs"].values()),
-    }
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon-32x32.png")
 
 
 @app.get("/status/{job_type}/{identifier}")
 async def status(request: Request, job_type: str, identifier: str):
     if job_type == "download-model":
-        status = omanager.context["jobs"].get(
-            identifier, "job with that identifier is undefined"
-        )
+        if MOCK_REMOTE_TRAFFIC:
+            status = mock_job_stack["jobs"].get(identifier, "job undefined...")
+        else:
+            status = omanager.context["jobs"].get(
+                identifier, "job with that identifier is undefined"
+            )
         finish_code = status["finish_code"]
         status_message = status["status"]
         if not status["status"] == "done":
@@ -317,6 +337,7 @@ async def status(request: Request, job_type: str, identifier: str):
                 context={
                     "identifier": f"{identifier}",
                     "message": f"{finish_code}: {status_message}",
+                    "job_type": f"{job_type}",
                 },
             )
         else:
@@ -327,15 +348,17 @@ async def status(request: Request, job_type: str, identifier: str):
                 context={
                     "identifier": f"{identifier}",
                     "message": "Finished downloading!!",
-                    "job_type": "download-model",
+                    "job_type": f"{job_type}",
                 },
             )
     elif job_type == "refresh-library":
         try:
-            status = oregistry.context["jobs"].get(
-                identifier, "job with that identifier is undefined"
-            )
-            status = mock_job_stack["jobs"].get(identifier, "job undefined...")
+            if MOCK_REMOTE_TRAFFIC:
+                status = mock_job_stack["jobs"].get(identifier, "job undefined...")
+            else:
+                status = oregistry.context["jobs"].get(
+                    identifier, "job with that identifier is undefined"
+                )
             finish_code = status["finish_code"]
             status_message = status["status"]
         except Exception as e:

@@ -53,10 +53,12 @@ async def mock_initiate_work(job_stack: dict, finish_code: str):
 async def mock_do_work(job_stack: dict, job_key: str):
     iter_over = range(40)
     jobs = job_stack["jobs"]
+    iter = 0
     for file, file_number in enumerate(iter_over):
+        iter += 1
         job_info = jobs[job_key]
         job_info["iteration"] = file_number
-        job_info["status"] = "inprogress"
+        job_info["status"] = f"inprogress {iter}"
         await asyncio.sleep(1)
     jobs[job_key]["status"] = "done"
 
