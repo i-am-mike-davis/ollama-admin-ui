@@ -23,13 +23,11 @@ wollama_resource_dir = importlib_resources.files("wollama")
 wollama_cache_dir = wollama_resource_dir.joinpath("cache")
 
 # TODO::
-# - [-] Setup logging.
 # - [ ] Setup test suite.
 # - [ ] Setup error handling.
 # - [ ] Add docstrings.
 # - [ ] Clean up comments.
 # - [ ] Clean up imports.
-# - [ ] Fix OllamaRegistry Cache dir logic.
 
 log = Log(Path(__file__).stem).logger
 LOG_LEVEL = "INFO"
@@ -340,12 +338,6 @@ class OllamaRegistry:
         cache_dir: str = path/to/wollama/cache/:  The file directory at which the catalog is saved as a pickle.
     """
 
-    #
-    # url: str = "https://ollama.com/library"
-    # catalog: Catalog
-    # delay: int = 3
-    # cache_dir: str = os.path.abspath("./")
-    #
     def __init__(
         self,
         url: str = "https://ollama.com/library",
@@ -376,10 +368,6 @@ class OllamaRegistry:
             catalog.save_to_cache(file_dir=wollama_cache_dir)
         except Exception as e:
             log.error(e)
-        # # Open a file and use dump()
-        # with open(self.cache_dir, "wb") as file:
-        #     # A new file will be created
-        #     pickle.dump(self, file)
 
     def load_from_cache(self):
         # Open the file in binary mode
@@ -389,14 +377,6 @@ class OllamaRegistry:
         except Exception as e:
             log.error(e)
             raise e
-
-        # with open(self.cache_dir, "rb") as file:
-        #     # Call load method to deserialze
-        #     cached_ollama_remote = pickle.load(file)
-        #     self.catalog = cached_ollama_remote.catalog
-        #     self.url = cached_ollama_remote.url
-        #     self.delay = cached_ollama_remote.delay
-        #     self.cache_dir = cached_ollama_remote.cache_dir
 
     async def do_work(self, job_key, files=None):
         iter_over = files if files else range(40)
@@ -472,9 +452,6 @@ class OllamaRegistry:
 
         try:
             # Fetch the website
-            # response = requests.get(url, headers=headers, timeout=timeout)
-            # time.sleep(self.delay)
-            # response = requests.get(url, timeout=timeout)
             await asyncio.sleep(self.delay)
             # response = requests.get(url, timeout=timeout)
             async with aiohttp.ClientSession() as session:
