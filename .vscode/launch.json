@@ -4,6 +4,7 @@
     {
       "name": "Project Debugger (launch.json)",
       "type": "debugpy",
+      "jinja": "true",
       "request": "launch",
       "program": "${workspaceFolder}/app/main.py",
       "console": "integratedTerminal",
