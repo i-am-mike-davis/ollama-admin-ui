@@ -285,7 +285,7 @@ async def status(request: Request, job_type: str, identifier: str):
         else:
             return templates.TemplateResponse(
                 request=request,
-                headers={"HX-Trigger": f"{finish_code}"},
+                headers={"HX-Trigger": f"refresh-library"},
                 name="message.html",
                 context={
                     "identifier": f"{identifier}",
