@@ -35,11 +35,7 @@ import uuid
 context = {"jobs": {}}
 
 # TODO:
-# - [-] Get progress from ollama operations.
-# - [-] Setup logging.
-# - [-] Setup error handling.
 # - [ ] Clean up comments.
-# - [ ] Make reading the environment variable more reliable.
 
 # Get environment variables
 dotenv_path = Path("../.env")
@@ -138,70 +134,9 @@ async def put_async_download(request: Request, model_name: str, tag: str):
             "job_type": "download-model",
         },
     )
-    # return templates.TemplateResponse(
-    #     request=request,
-    #     name="error-bar.html",
-    #     context={"error_message": f"{e}"},
-    #     status_code=500,
-    # )
-
-
-@app.put("/create")
-async def create():
-    identifier = await omanager.do_work_wrap()
-    return {"identifier": identifier}
-
-
-@app.put("/download/{model_name}")
-def put_download(request: Request, model_name: str, tag: str):
-    if model_name in omanager.catalog.models.keys():
-        if tag in omanager.catalog.models["model_name"].tag_collection.tags.keys():
-            return templates.TemplateResponse(
-                request=request,
-                name="button-downloaded.html",
-                context={
-                    "tag_name": f"{tag}",
-                    "url": f"/delete/{model_name}?tag={tag}",
-                    "model_name": f"{model_name}",
-                },
-            )
-
-    try:
-        # oclient.pull(model=f"{model_name}:{tag}")
-        log.info(f"Downloading {model_name}:{tag}")
-        omanager.pull(model=model_name, tag=tag)
-        log.info(f"Finished downloading... {model_name}:{tag}")
-    except Exception as e:
-        print(e)
-        # raise HTTPException(status_code=500, detail=f"{e}")
-        # return templates.TemplateResponse(
-        #     request=request,
-        #     name="button-downloaded.html",
-        #     context={"url": f"/delete/{model_name}={tag}"},
-        # )
-        # html = f"""
-        #     <button id="error-bar" class="visible bg-[#991b1b]">{e}</button>
-        #     """
-        return templates.TemplateResponse(
-            request=request,
-            name="error-bar.html",
-            context={"error_message": f"{e}"},
-            status_code=500,
-        )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="button-downloaded.html",
-        context={
-            "tag_name": f"{tag}",
-            "url": f"/delete/{model_name}?tag={tag}",
-            "model_name": f"{model_name}",
-        },
-    )
 
 
 # TODO: Parametize the finish code
-# TODO: Rename finish code to finish message
 @app.post("/refresh-library")
 async def post_refresh(request: Request):
     finish_code = "refresh-library"
@@ -232,20 +167,6 @@ async def read_finished(request: Request, job_type: str):
     #
     if job_type == "refresh-library":
         return HTMLResponse(headers={"HX-Redirect": "/"})
-        # return templates.TemplateResponse(
-        #     request=request,
-        #     name="refresh-library.html",
-        #     context={
-        #         "button_value": "Refreshing...",
-        #         "tag_name": "Refreshing the library...",
-        #         "url": "/static/refresh-library.html",
-        #         "model_name": "N/A",
-        #         "identifier": f"{identifier}",
-        #         "job_type": f"{finish_code}",
-        #         "message": "Initiating refresh of remote catalog",
-        #     },
-        # )
-        #
 
 
 @app.post("/delete/{model_name}")
@@ -281,40 +202,6 @@ async def read_root(request: Request):
         name="library.html",
         context={"remote": oregistry.catalog, "local": omanager.catalog},
     )
-
-
-@app.get("/test", response_class=HTMLResponse)
-async def read_test(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="message.html",
-        context={"message": f"{str(uuid.uuid4())}test!"},
-    )
-
-
-@app.get("/time", response_class=HTMLResponse)
-async def read_time(request: Request):
-    import datetime
-    import time
-
-    now_time = time.time()
-    return templates.TemplateResponse(
-        request=request,
-        name="message-poll.html",
-        context={"message": f"Current Time{str(now_time)}"},
-    )
-
-
-# @app.post("/work/test")
-# async def testing(files: List[UploadFile]):
-#     identifier = str(uuid.uuid4())
-#     context[jobs][identifier] = {}
-#     asyncio.run_coroutine_threadsafe(
-#         do_work(identifier, files), loop=asyncio.get_running_loop()
-#     )
-#
-#     return {"identifier": identifier}
-#
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -390,7 +277,7 @@ async def status(request: Request, job_type: str, identifier: str):
             )
 
 
-#
+# TODO: Add a /local endpoint to see all downloaded models in one view.
 # @app.get("/local", response_class=HTMLResponse)
 # async def read_root(request: Request):
 #     return templates.TemplateResponse(
