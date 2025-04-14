@@ -64,10 +64,13 @@ OLLAMA_ADDRESS = os.getenv("OLLAMA_ADDRESS")
 
 MOCK_REMOTE_TRAFFIC = os.getenv("MOCK_REMOTE_TRAFFIC")
 
-if MOCK_REMOTE_TRAFFIC.upper() == "TRUE":
-    log.debug("Mocking remote traffic!")
-    log.warning("Mocking remote traffic!")
-    MOCK_REMOTE_TRAFFIC = True
+if MOCK_REMOTE_TRAFFIC is not None:
+    if MOCK_REMOTE_TRAFFIC.upper() == "TRUE":
+        log.debug("Mocking remote traffic!")
+        log.warning("Mocking remote traffic!")
+        MOCK_REMOTE_TRAFFIC = True
+    else:
+        MOCK_REMOTE_TRAFFIC = False
 else:
     MOCK_REMOTE_TRAFFIC = False
 
@@ -347,7 +350,7 @@ async def status(request: Request, job_type: str, identifier: str):
                 name="message.html",
                 context={
                     "identifier": f"{identifier}",
-                    "message": "Finished downloading!!",
+                    "message": f"{finish_code}: Finished downloading!",
                     "job_type": f"{job_type}",
                 },
             )
