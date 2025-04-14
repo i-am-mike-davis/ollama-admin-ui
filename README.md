@@ -7,6 +7,8 @@
 ![Library Screenshot](./pics/library.png)
 > DISCLAIMER: I am not affiliated with the [Ollama](https://ollama.com) project. I made this for fun.
 
+> DISCLAIMER: ollama-admin-ui provides no authentication mechanisms and makes no guarantees about security. You probably shouldn't use it in production.
+
 ollama-admin-ui is a web application that makes it easy to administer your local ollama docker installation.
 
 Specifically, ollama-admin-ui makes it easy to...
@@ -19,22 +21,13 @@ Specifically, ollama-admin-ui makes it easy to...
 Further, ollama-admin-ui...
 
 - provides links back to ollama.com for individual models, making it easy to get additional information from the official source.
-- uses the same visual styling engine (Tailwindcss) and themes that ollama.com uses, making ollama-admin-ui visually appealing, functional, and fit for purpose. Switching between ollama.com and ollama-admin-ui is seamless.
+- uses the same visual styling engine (Tailwindcss) and themes that ollama.com uses, making ollama-admin-ui visually appealing and coherent. Switching between ollama.com and ollama-admin-ui is seamless.
 - provides an exportable ollama model/tag library manifest in json.
 
 ## Motivation
 
 - I wanted something to help me manage the models on my local ollama installation without having to run curl commands or a python script and I wasn't aware of a similar project.
 - I recently read the [hypermedia systems](https://hypermedia.systems/) book, and was inspired to make a hypermedia-based web application.
-
-## Limitations
-
-- It is a known issue that ollama does not publish a complete manifest of model and tag information for easy download.
-  - <https://github.com/ollama/ollama/issues/286>
-  - <https://github.com/ollama/ollama/pull/10174>
-  - <https://github.com/ollama/ollama/pull/10046>
-- As a result, ollama-admin-ui must scrape ollama.com for model information to refresh the library. To mitigate overloading of the servers, ollama-admin-ui comes with a library that is preloaded with information.
-- The refresh functionality is rate-limited to protect ollama.com's servers, making a complete library refresh slow. As the ollama team publishes a way to pull library information without web-scrapping, this part of the application can be updated to use that method instead.
 
 # Usage
 
@@ -105,6 +98,15 @@ catalog = oregistry.catalog
 catalog.export_catalog("/path/to/file.json")
 
 ```
+
+## Limitations
+
+- It is a known issue that ollama does not publish a complete manifest of model and tag information for easy download.
+  - <https://github.com/ollama/ollama/issues/286>
+  - <https://github.com/ollama/ollama/pull/10174>
+  - <https://github.com/ollama/ollama/pull/10046>
+- As a result, ollama-admin-ui must scrape ollama.com for model information to refresh the library. To mitigate overloading of the servers, ollama-admin-ui comes with a library that is preloaded with information.
+- The refresh functionality is rate-limited to protect ollama.com's servers, making a complete library refresh slow. As the ollama team publishes a way to pull library information without web-scrapping, this part of the application can be updated to use that method instead.
 
 # Similar Projects
 
