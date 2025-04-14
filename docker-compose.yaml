@@ -1,4 +1,10 @@
 services:
+    ollama-admin-ui:
+      build: .
+      ports:
+        - 8001:8001
+      environment:
+        OLLAMA_ADDRESS: "http://ollama:11434"
     ollama:
         volumes:
             - ollama:/root/.ollama
