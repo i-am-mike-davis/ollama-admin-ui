@@ -31,6 +31,35 @@
               <sub-title class="italic">Manage Your Large Language Models</sub-title>
             </div>
           </div>
+          <div class="relative flex appearance-none bg-black/5 border border-neutral-100 items-center rounded-full" hx-on:focusout="
+                  if (!this.contains(event.relatedTarget)) {
+                    const searchPreview = document.querySelector('#searchpreview');
+                    if (searchPreview) {
+                      htmx.addClass('#searchpreview', 'hidden');
+                    }
+                  }
+                ">
+            <span id="searchIcon" class="pl-2 text-2xl text-neutral-500">
+              <svg class="mt-0.25 ml-1.5 h-5 w-5 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="m8.5 3c3.0375661 0 5.5 2.46243388 5.5 5.5 0 1.24832096-.4158777 2.3995085-1.1166416 3.3225711l4.1469717 4.1470988c.2928932.2928932.2928932.767767 0 1.0606602-.2662666.2662665-.6829303.2904726-.9765418.0726181l-.0841184-.0726181-4.1470988-4.1469717c-.9230626.7007639-2.07425014 1.1166416-3.3225711 1.1166416-3.03756612 0-5.5-2.4624339-5.5-5.5 0-3.03756612 2.46243388-5.5 5.5-5.5zm0 1.5c-2.209139 0-4 1.790861-4 4s1.790861 4 4 4 4-1.790861 4-4-1.790861-4-4-4z"></path>
+              </svg>
+            </span>
+            <input
+              id="search"
+              _="on keyup
+              if the event's key is 'Escape'
+                set my value to ''
+                trigger keyup
+              else
+                show <tbody>tr/> in #library when its innerHTML contains my value 
+              "
+              name="q"
+              class="resize-none rounded-full border-0 py-2.5 bg-transparent text-sm w-full placeholder:text-neutral-500 focus:outline-none focus:ring-0"
+              placeholder="Search models"
+              autocomplete="off"
+            >
+            <div id="searchpreview" class="hidden absolute left-0 right-0 top-12 z-50" style="width: calc(100% + 2px); margin-left: -1px;"></div>
+          </div>
           <!-- <div class="hidden lg:flex xl:flex-1 items-center space-x-6 ml-6 mr-6 xl:mr-0 text-lg"> -->
           <!--   <a class="hover:underline focus:underline focus:outline-none focus:ring-0" target="_blank" href="https://discord.com/invite/ollama">Discord</a> -->
           <!--   <a class="hover:underline focus:underline focus:outline-none focus:ring-0" target="_blank" href="https://github.com/ollama/ollama">GitHub</a> -->

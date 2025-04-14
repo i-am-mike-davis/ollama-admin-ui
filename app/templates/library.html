@@ -1,7 +1,14 @@
 {% extends 'skeleton.html' %}
 {% block content %}
 <h1 class="text-blue-600 dark:text-sky-400"></h1>
-   <table>
+      <!--<input type="text" placeholder="Search Quotes..."-->
+      <!--    _="on keyup-->
+      <!--        if the event's key is 'Escape'-->
+      <!--          set my value to ''-->
+      <!--          trigger keyup-->
+      <!--        else-->
+      <!--          show <tr/> in #library when its textContent contains my value">-->
+      <table id="library">
         <thead>
         <tr>
             <th>Name</th>
@@ -11,8 +18,8 @@
         </thead>
         <tbody>
             {% for model in remote.models.values() %}
-              <tr>
-                  {% set model_name = model.name %}
+            {% set model_name = model.name %}
+            <tr id="row-{{ model_name }}">
                   <td><a href="{{ model.link }}" target="_blank" class="font-bold">{{ model.name }}</a></td>
                   <td>{{ model.short_description }}</td>
                   <td> 
