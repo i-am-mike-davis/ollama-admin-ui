@@ -1,38 +1,40 @@
-# ollama-admin-ui
-
 ![Ollama Admin UI Logo](./pics/ollama-admin-ui.png)
+
+ollama-admin-ui is a web application that makes it easy to download and delete models on your local ollama docker installation using your web browser.
+
+> DISCLAIMER: I am not affiliated with the [ollama](https://ollama.com) project. I made this for fun.
 
 ## "Manage Your Large Language Models"
 
 ![Library Screenshot](./pics/library.png)
-> DISCLAIMER: I am not affiliated with the [Ollama](https://ollama.com) project. I made this for fun.
 
-> DISCLAIMER: ollama-admin-ui provides no authentication mechanisms and makes no guarantees about security. You probably shouldn't use it in production.
-
-ollama-admin-ui is a web application that makes it easy to administer your local ollama docker installation.
-
-Specifically, ollama-admin-ui makes it easy to...
+### ollama-admin-ui makes it easy to
 
 - see what models are available for download
 - search model names, descriptions, and tags
 - download desired models
 - remove unwanted models
 
-Further, ollama-admin-ui...
+### Further, ollama-admin-ui
 
 - provides links back to ollama.com for individual models, making it easy to get additional information from the official source.
 - uses the same visual styling engine (Tailwindcss) and themes that ollama.com uses, making ollama-admin-ui visually appealing and coherent. Switching between ollama.com and ollama-admin-ui is seamless.
 - provides an exportable ollama model/tag library manifest in json.
 
+> DISCLAIMER: ollama-admin-ui provides no authentication mechanisms and makes no guarantees about security. You probably shouldn't use it in production.
+
 ## Motivation
 
 - I wanted something to help me manage the models on my local ollama installation without having to run curl commands or a python script and I wasn't aware of a similar project.
 - I recently read the [hypermedia systems](https://hypermedia.systems/) book, and was inspired to make a hypermedia-based web application.
+- I love the ollama project and wanted to make something complimentary.
 
 # Usage
 
 ```
+git clone the project...
 cd ollama-admin-ui
+docker compose build
 docker compose up
 ```
 
@@ -64,7 +66,7 @@ Use the search box to search for models and tags.
 
 ## Accessing the model/tag catalog programmatically
 
-If you're a developer, the utility class wollama, provided by ollama-admin-ui source code can be used to produce the ollama model/tag library as JSON.
+If you're a developer, the utility class wollama, provided by ollama-admin-ui source code can be used to programmatically access the model/tag catalog via the Catalog object. The Catalog object can also export the ollama model/tag library as JSON.
 
 ```
 
@@ -110,6 +112,7 @@ catalog.export_catalog("/path/to/file.json")
 
 # Similar Projects
 
+- <https://github.com/zeitlings/alfred-ollama>
 - <https://github.com/lemonit-eric-mao/ollama-web-management>
 - <https://github.com/imoize/plasmoid-ollamacontrol>
 
@@ -151,6 +154,7 @@ tailwindcss --watch -i ./app/static/css/input.css -o ./app/static/css/output.css
 
 ## About
 
+- [ollama](https://github.com/ollama/ollama)
 - [Hypermedia, HTMX, Hyperscript](https://hypermedia.systems/extending-html-as-hypermedia/>)
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [Jinja](https://jinja.palletsprojects.com/en/stable/)
