@@ -217,7 +217,7 @@ async def read_root(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="library.html",
-        context={"remote": remote, "local": local},
+        context={"remote": remote, "local": local, "ollama_address": OLLAMA_ADDRESS},
     )
 
 
